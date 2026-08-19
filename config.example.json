@@ -1,0 +1,31 @@
+{
+  "seq": {
+    "rpc": "http://USER:PASS@127.0.0.1:18200",
+    "wallet": "seqcj"
+  },
+  "http": { "host": "127.0.0.1", "port": 9971 },
+
+  "fee_asset": "FEE_ASSET_ID_HEX",
+  "fee_rate_atoms_per_vb": 2,
+
+  "sbtc": { "asset": "SBTC_ASSET_ID_HEX", "bridge_path": "/sbtc" },
+
+  "lanes": [
+    { "asset": "USDX_ASSET_ID_HEX", "denom_atoms": "10000000",  "coord_fee_atoms": "0", "label": "USDX 0.1" },
+    { "asset": "SBTC_ASSET_ID_HEX", "denom_atoms": "1000000",   "coord_fee_atoms": "0", "label": "BTC 0.01", "btc_backed": true }
+  ],
+
+  "round": {
+    "input_ms": 180000,
+    "output_ms": 60000,
+    "sign_ms": 180000,
+    "min_participants": 2,
+    "max_participants": 12,
+    "max_credentials": 4,
+    "max_inputs_per_participant": 8,
+    "min_conf": 1,
+    "ban_ms": 3600000,
+    "concurrent_open": 1,
+    "key_bits": 2048
+  }
+}

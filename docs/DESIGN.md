@@ -137,7 +137,21 @@ broken, a column in an access log is simply read. This is why:
 **The anonymity set is the round.** Two participants means two. Both clients let you set a floor;
 Seqognito checks it after the round is final, when walking away still costs nothing.
 
-## 7. What is proven, and how
+## 7. Live
+
+The coordinator runs on the Sequentia testnet at **`https://sequentiatestnet.com/coinjoin`**, with
+three lanes (USDX 10.00, EURX 10.00, BTC 0.001) and the network fee paid by the coordinator in USDX.
+
+First live round, 2026-08-19: transaction
+`77f5e1ed48a111baf41ab0d666915cd2b7e8bde168416d9fdd1dd2f1f644197e`, confirmed at height 99691.
+Two participants, 3 inputs, 8 outputs, 8.6 kvB. **Exactly one output is explicit — the fee — and the
+other seven are commitments**, mix outputs and change alike. Each participant unblinded its own two
+denominations and its change and nothing else.
+
+The fee was 5,000 atoms of USDX: an issued asset, not the policy asset, funded entirely by the
+coordinator, so neither participant needed to hold anything but the asset they were mixing.
+
+## 8. What is proven, and how
 
 * `test/e2e-round.test.mjs` — three participants, a real `sequentiad` regtest, a full round: 12
   outputs, 13.5 kvB, accepted and broadcast, each participant unblinding exactly its own two

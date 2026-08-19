@@ -185,7 +185,11 @@ export function roundPublic(r, cfg) {
     max_participants: cfg.round.max_participants,
     max_credentials: cfg.round.max_credentials,
     inputs_registered: [...r.registrations.values()].reduce((n, g) => n + g.inputs.length, 0),
+    // Two different numbers, because conflating them reads as progress that has not happened: the
+    // total includes the change outputs registered in phase one, while only the anonymous mix
+    // outputs of phase two are what the round is waiting for.
     outputs_registered: r.outputs.length,
+    mix_outputs_registered: r.spentNonces.size,
     credentials_issued: r.credentialsIssued,
     lanes: r.lanes.map((l, i) => ({
       index: i,

@@ -77,6 +77,24 @@ that means it routes the two phases over separate circuits. The browser PoC does
 
 **The anonymity set is the round, and nothing else.** Two participants means an anonymity set of two.
 
+## Live
+
+```
+https://sequentiatestnet.com/coinjoin/status
+https://sequentiatestnet.com/coinjoin/rounds
+```
+
+Lanes: USDX 10.00, EURX 10.00, BTC 0.001. The first live round confirmed at height 99691 —
+`77f5e1ed48a111baf41ab0d666915cd2b7e8bde168416d9fdd1dd2f1f644197e`, eight outputs of which exactly
+one, the fee, is explicit.
+
+A round needs at least two people, so `tools/live-participant.mjs` joins one from a node wallet:
+
+```sh
+node tools/live-participant.mjs --rpc http://user:pass@127.0.0.1:18200 --wallet alice \
+  --coordinator https://sequentiatestnet.com/coinjoin --asset <hex> --denominations 2
+```
+
 ## Running it
 
 ```sh

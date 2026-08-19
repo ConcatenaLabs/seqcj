@@ -1,0 +1,5 @@
+config.json
+state.json
+state.json.tmp
+node_modules/
+*.log

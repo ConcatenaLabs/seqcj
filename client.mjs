@@ -22,7 +22,7 @@
 // the round promised. This module cannot check it for you: it never sees a key, a blinding factor or
 // a balance. It refuses to proceed if the hook is missing rather than defaulting to "sign it".
 
-import { blind, unblind } from './blindsig.mjs';
+import { blind, unblind, randomU32 } from './blindsig.mjs';
 
 const DEFAULT_SLEEP = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -108,7 +108,7 @@ export async function runRound({ hooks, assetId, maxCredentials }) {
   // plainly that it cannot.
   await waitForPhase(fetchJson, round.round_id, 'output', sleep, status);
   const mixAddresses = [];
-  for (const cred of shuffled(credentials)) {
+  for (const cred of await shuffled(credentials)) {
     const address = await freshAddress();
     mixAddresses.push(address);
     await fetchJson('/register-output', { round_id: round.round_id, credential: cred, address });
@@ -190,11 +190,13 @@ export function verifyRoundOutputs({ mine, mixScripts, changeScript, denom, chan
   return credited;
 }
 
-function shuffled(a) {
+// Order is metadata. Presenting credentials in the order they were issued would tell the
+// coordinator which output belongs to which registration, which is the one thing the blinding
+// exists to prevent — so the shuffle uses the same cryptographic randomness as everything else.
+async function shuffled(a) {
   const out = a.slice();
   for (let i = out.length - 1; i > 0; i--) {
-    const r = new Uint32Array(1); crypto.getRandomValues(r);
-    const j = r[0] % (i + 1);
+    const j = (await randomU32()) % (i + 1);
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;

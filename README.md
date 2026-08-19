@@ -107,6 +107,19 @@ This is worth being blunt about: the bridge sees the BTC that goes in and the BT
 mix breaks the link **on Sequentia**, so the bridge cannot pair a deposit with a withdrawal unless it
 is the only user of the round. It is not a substitute for the peg being a trusted custodian.
 
+## The clients
+
+| | |
+|---|---|
+| [Seqognito](https://github.com/GracedEternalKingCabbageMan/seqognito) | the desktop mixing wallet (Windows, Linux). Sends input registration and output registration over **different Tor circuits**, which is the one thing a browser cannot do and the reason it exists. |
+| [sequentia-web-wallet](https://github.com/GracedEternalKingCabbageMan/sequentia-web-wallet) | the browser wallet's Mix tab. Runs the identical protocol, and says plainly that it cannot separate the two connections. |
+
+Both vendor `blindsig.mjs` and `client.mjs` from here byte-identically, so the protocol they run is
+the one the end-to-end test proves.
+
+The full design note, including the fee model, the assembly-integrity argument and the threat model,
+is in [`docs/DESIGN.md`](docs/DESIGN.md).
+
 ## Tests
 
 ```sh

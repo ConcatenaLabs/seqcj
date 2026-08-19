@@ -155,7 +155,8 @@ function makeRound(cfg) {
     id: rid(),
     created: nowMs(),
     phase: 'input',
-    deadline: nowMs() + cfg.round.input_ms,
+    // No countdown yet. A round is not on the clock until it could actually happen — see advance().
+    deadline: Infinity,
     lanes: cfg.lanes.map((l) => ({
       asset: l.asset,
       label: l.label || l.asset.slice(0, 8),
@@ -179,7 +180,10 @@ export function roundPublic(r, cfg) {
   return {
     round_id: r.id,
     phase: r.phase,
-    deadline_ms: Math.max(0, r.deadline - nowMs()),
+    // null while the round is still waiting for the participant that makes it viable: a countdown
+    // shown before there is one is a promise the coordinator has not made.
+    deadline_ms: Number.isFinite(r.deadline) ? Math.max(0, r.deadline - nowMs()) : null,
+    waiting_for_participants: r.phase === 'input' && r.registrations.size < cfg.round.min_participants,
     participants: r.registrations.size,
     min_participants: cfg.round.min_participants,
     max_participants: cfg.round.max_participants,
@@ -286,6 +290,14 @@ async function registerInput(r, cfg, body) {
   r.credentialsIssued += k;
   if (changeOut) r.outputs.push({ ...changeOut, kind: 'change' });
   log(`round ${r.id}: +${resolved.length} input(s) in lane ${lane.label}, ${k} credential(s), change ${change}`);
+  // The clock starts when the round becomes viable, not when it opened. On a quiet coordinator a
+  // fixed countdown means every round expires empty and whoever arrives alone always misses; worse,
+  // it means arriving ten seconds after a round opened costs a full cycle of waiting. Now the first
+  // participant simply waits, and the timer starts the moment a second one makes a mix possible.
+  if (r.registrations.size === cfg.round.min_participants) {
+    r.deadline = nowMs() + cfg.round.input_ms;
+    log(`round ${r.id}: viable with ${r.registrations.size} participants — closing registration in ${Math.round(cfg.round.input_ms / 1000)}s`);
+  }
   if (r.registrations.size >= cfg.round.max_participants) r.deadline = Math.min(r.deadline, nowMs() + 2000);
   return { registration_id: regid, blind_sigs, change_atoms: change.toString() };
 }
@@ -480,7 +492,7 @@ async function finishRound(r, cfg) {
   const [test] = await seqrpc('testmempoolaccept', [[combined]]);
   if (!test.allowed) throw new Error('assembled round was rejected: ' + test['reject-reason']);
   const txid = await seqrpc('sendrawtransaction', [combined]);
-  r.txid = txid; r.phase = 'done';
+  r.txid = txid; r.phase = 'done'; r.finished = nowMs();
   STATE.history.unshift({ txid, at: Date.now(), participants: r.registrations.size, outputs: r.outputs.length, vsize: r.tx.vsize });
   STATE.history = STATE.history.slice(0, 100);
   saveState();
@@ -492,7 +504,7 @@ async function finishRound(r, cfg) {
 // after round. Earlier phases are NOT attributable (that is the blinding working as intended), so
 // nothing is banned for them.
 function failRound(r, cfg, reason) {
-  r.phase = 'failed'; r.error = reason;
+  r.phase = 'failed'; r.error = reason; r.finished = nowMs();
   if (r.tx) {
     const until = Date.now() + (cfg.round.ban_ms || 3600000);
     for (const g of r.registrations.values()) {
@@ -525,7 +537,16 @@ export async function advance(r, cfg) {
   const expired = nowMs() >= r.deadline;
   if (r.phase === 'input') {
     const enough = r.registrations.size >= cfg.round.min_participants;
-    if (expired && !enough) return failRound(r, cfg, `only ${r.registrations.size} participant(s) registered`);
+    // A round waiting for company waits indefinitely — but not for ever with somebody's coins held
+    // out of every other round. After `stale_ms` an unviable round is released so those coins are
+    // free again, and a fresh round opens behind it.
+    if (!enough) {
+      const waited = nowMs() - r.created;
+      if (r.registrations.size > 0 && waited > (cfg.round.stale_ms ?? 1800000)) {
+        return failRound(r, cfg, `no second participant arrived in ${Math.round(waited / 60000)} minutes`);
+      }
+      return;
+    }
     if (expired || r.registrations.size >= cfg.round.max_participants) {
       r.phase = 'output';
       r.deadline = nowMs() + cfg.round.output_ms;
@@ -555,9 +576,11 @@ async function tick() {
     for (const r of ROUNDS.values()) {
       try { await advance(r, CFG); } catch (e) { err('advance:', e.message); }
     }
-    // Retire finished rounds after a grace period so clients can still read the outcome.
+    // Retire finished rounds after a grace period so clients can still read the outcome. `deadline`
+    // can be Infinity on a round that never became viable, so the clock here is the retirement time
+    // recorded when it finished.
     for (const [id, r] of ROUNDS) {
-      if ((r.phase === 'done' || r.phase === 'failed') && nowMs() - r.deadline > 120000) ROUNDS.delete(id);
+      if ((r.phase === 'done' || r.phase === 'failed') && nowMs() - (r.finished || 0) > 120000) ROUNDS.delete(id);
     }
     const open = [...ROUNDS.values()].filter((r) => r.phase === 'input');
     if (open.length < (CFG.round.concurrent_open || 1)) {

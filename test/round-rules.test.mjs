@@ -181,6 +181,54 @@ test('a round with an unredeemed credential is aborted, not published', async ()
   assert.match(r.error, /0 of 4 credentials/);
 });
 
+test('a round waits for company instead of expiring alone', async () => {
+  const w = newWallet(), w2 = newWallet();
+  const t1 = '66'.repeat(32), t2 = '77'.repeat(32);
+  const { r, cfg } = setup({ [t1 + ':0']: coin(w.script, '10.01000000'), [t2 + ':0']: coin(w2.script, '10.01000000') });
+  cfg.round.input_ms = 50;
+
+  // Nobody has registered: the round has no deadline at all, and cannot expire.
+  assert.equal(r.deadline, Infinity);
+  await advance(r, cfg);
+  assert.equal(r.phase, 'input');
+
+  // One participant. Still no clock — a countdown here would mean the first to arrive always loses.
+  await registerInput(r, cfg, {
+    inputs: [{ txid: t1, vout: 0, pubkey: w.pubkey, sig: w.prove(ownershipMessage(r.id, t1, 0)) }],
+    credentials: [(await blind(r.lanes[0].key.pub)).blinded],
+  });
+  assert.equal(r.deadline, Infinity);
+  await advance(r, cfg);
+  assert.equal(r.phase, 'input', 'a round with one participant must keep waiting');
+
+  // The second makes it viable, and only now does registration start closing.
+  await registerInput(r, cfg, {
+    inputs: [{ txid: t2, vout: 0, pubkey: w2.pubkey, sig: w2.prove(ownershipMessage(r.id, t2, 0)) }],
+    credentials: [(await blind(r.lanes[0].key.pub)).blinded],
+  });
+  assert.ok(Number.isFinite(r.deadline), 'the clock starts when a mix becomes possible');
+  await new Promise((res) => setTimeout(res, 60));
+  await advance(r, cfg);
+  assert.equal(r.phase, 'output');
+});
+
+test('a lone registration is eventually released rather than held for ever', async () => {
+  const w = newWallet();
+  const txid = '88'.repeat(32);
+  const { r, cfg } = setup({ [txid + ':0']: coin(w.script, '10.01000000') });
+  cfg.round.stale_ms = 10;
+  await registerInput(r, cfg, {
+    inputs: [{ txid, vout: 0, pubkey: w.pubkey, sig: w.prove(ownershipMessage(r.id, txid, 0)) }],
+    credentials: [(await blind(r.lanes[0].key.pub)).blinded],
+  });
+  r.created = Date.now() - 1000;              // waited long enough
+  await advance(r, cfg);
+  // Waiting for company is fine; waiting for ever with someone's coins locked out of every other
+  // round is not.
+  assert.equal(r.phase, 'failed');
+  assert.match(r.error, /no second participant/);
+});
+
 test('fee sizing tracks the cost of confidentiality', () => {
   // A blinded output is ~1.3 kvB of proofs; that is the whole reason round size is capped.
   assert.ok(estimateVsize(5, 12) > 15000);

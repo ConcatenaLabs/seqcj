@@ -28,12 +28,46 @@
 // therefore always < n. A plain "hash into the low 32 bytes" would be forgeable (small-exponent /
 // multiplicative attacks); full-domain hashing is what the security proof needs.
 //
-// THIS FILE IS ISOMORPHIC. No imports, no node: builtins, no globals beyond WebCrypto's SHA-256 —
-// the coordinator and the browser wallet run the identical code. The coordinator's private half
-// (the d exponent) is never here: it uses OpenSSL through node:crypto (coordinator.mjs), so no
-// hand-rolled arithmetic ever touches the secret exponent.
+// THIS FILE IS ISOMORPHIC. Its only dependency is WebCrypto — SHA-256 and randomness — reached
+// through the shim below, which is the single place that knows a runtime difference exists. The
+// coordinator, the browser wallet and the desktop wallet run the identical code. The coordinator's
+// private half (the d exponent) is never here: it uses OpenSSL through node:crypto
+// (coordinator.mjs), so no hand-rolled arithmetic ever touches the secret exponent.
 
 const enc = new TextEncoder();
+
+// WebCrypto, wherever this runtime keeps it.
+//
+// Browsers have `globalThis.crypto`, and so does Node 19 and later. Node 18 does NOT when the
+// entrypoint is a file — `node -e` sees the global and `node script.mjs` does not, which is a
+// genuinely surprising difference and cost a live round to find. There it lives on
+// `require('node:crypto').webcrypto` instead. The import below is dynamic and only ever runs on
+// Node, so a browser (which never reaches it) is unaffected; these repositories have no bundler by
+// design, so nothing tries to resolve it ahead of time.
+let _wc = (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) ? globalThis.crypto : null;
+async function webcrypto() {
+  if (_wc) return _wc;
+  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    const mod = await import('node:crypto');
+    if (mod.webcrypto && mod.webcrypto.subtle) { _wc = mod.webcrypto; return _wc; }
+  }
+  throw new Error('this runtime provides no WebCrypto; a CoinJoin credential cannot be created safely without it');
+}
+
+// Randomness, from the same place. Every value here is security-critical — a nonce an adversary can
+// predict is a credential they can recognise — so there is no Math.random fallback anywhere.
+export async function randomBytes32() {
+  const wc = await webcrypto();
+  const n = new Uint8Array(32);
+  wc.getRandomValues(n);
+  return n;
+}
+export async function randomU32() {
+  const wc = await webcrypto();
+  const a = new Uint32Array(1);
+  wc.getRandomValues(a);
+  return a[0];
+}
 
 // ---- small helpers ----------------------------------------------------------
 export function bytesToBig(b) {
@@ -61,8 +95,8 @@ export function fromHex(h) {
 }
 
 async function sha256(bytes) {
-  const d = await crypto.subtle.digest('SHA-256', bytes);
-  return new Uint8Array(d);
+  const wc = await webcrypto();
+  return new Uint8Array(await wc.subtle.digest('SHA-256', bytes));
 }
 
 // modular exponentiation, square-and-multiply. Only ever called with the PUBLIC exponent (e, and
@@ -124,22 +158,20 @@ export async function fdh(nonce, klen) {
 }
 
 // ---- the client half --------------------------------------------------------
-export function randomNonce() {
-  const n = new Uint8Array(32);
-  crypto.getRandomValues(n);
-  return n;
-}
+export const randomNonce = randomBytes32;
 
 // Blind a fresh nonce under the round key. Returns what to send (`blinded`) and what to keep
 // (`nonce`, `factor`) — the kept half is what turns the coordinator's answer into a credential, and
 // it must never leave the client before the output-registration phase.
-export async function blind(pub, nonce = randomNonce()) {
+export async function blind(pub, nonce = null) {
+  const wc = await webcrypto();
+  if (!nonce) nonce = await randomBytes32();
   const n = BigInt('0x' + pub.n), e = BigInt('0x' + pub.e);
   const klen = fromHex(pub.n).length;
   const m = await fdh(nonce, klen);
   for (let attempt = 0; attempt < 8; attempt++) {
     const rb = new Uint8Array(klen);
-    crypto.getRandomValues(rb);
+    wc.getRandomValues(rb);
     rb[0] &= 0x7f;                       // keep r < n without a rejection loop biased at the top
     const r = bytesToBig(rb) % n;
     if (r < 2n) continue;

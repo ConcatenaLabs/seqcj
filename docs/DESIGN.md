@@ -123,8 +123,9 @@ between them, because two bridge requests seconds apart from one exit pair thems
 **Hidden from the coordinator:** which of your inputs paid for which of your mix outputs.
 
 **NOT hidden from the coordinator:** your amounts, and the link between your inputs and your change.
-This is the standard WabiSabi-style boundary. A coordinator that logs everything still cannot tell
-which mixed output is yours.
+This is the ZeroLink / Wasabi 1.0 (Chaumian CoinJoin) boundary. WabiSabi-style amount credentials
+would hide the change link as well; they are not implemented here. A coordinator that logs
+everything still cannot tell which mixed output is yours.
 
 **Not hidden by the protocol at all:** your network identity. Registering inputs and outputs from one
 IP address hands the coordinator the link the blind signature just removed — no cryptography is

@@ -18,10 +18,11 @@
 //     participant hold" is answered only by "one of the ones in this transaction".
 //
 // The coordinator never holds user funds. It sees amounts (it must, to check the round balances) and
-// it can link a participant's inputs to their change, exactly as any WabiSabi-style coordinator can.
-// What it cannot do — and what the blind signatures buy — is link a participant's inputs to their
-// MIX outputs. What the chain cannot do is see any of it. The honest threat model is in
-// doc/sequentia/coinjoin.md in the Sequentia repo; read it before believing anything stronger.
+// it can link a participant's inputs to their change, exactly as a ZeroLink / Wasabi 1.0 (Chaumian
+// CoinJoin) coordinator can; WabiSabi-style amount credentials would hide that link too, and are not
+// implemented here. What it cannot do — and what the blind signatures buy — is link a participant's
+// inputs to their MIX outputs. What the chain cannot do is see any of it. The honest threat model is
+// in docs/DESIGN.md §6; read it before believing anything stronger.
 //
 // THE ROUND
 //

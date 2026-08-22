@@ -128,16 +128,16 @@ The HTTP API is public by design — anyone should be able to join a round:
 
 ## Bitcoin
 
-Parent-chain BTC joins a round as **SBTC**, through the SBTC bridge
+Parent-chain BTC joins a round as **SBTC**, through the SBTC peg
 ([sbtc-bridge](https://github.com/GracedEternalKingCabbageMan/sbtc-bridge)) — an operator-run
-custody bridge, not Elements' consensus peg: deposit before the round, mix, withdraw to a fresh
-Bitcoin address after. The coordinator never touches those funds — it only publishes, in `/status`,
-which lane is the BTC-backed one and where the bridge lives, and the wallet talks to the bridge
-itself.
+custody peg (the sbtc-bridge multisig reserve), not Elements' federated consensus peg: peg in
+before the round, mix, peg out to a fresh Bitcoin address after. The coordinator never touches
+those funds — it only publishes, in `/status`, which lane is the BTC-backed one and where the
+bridge lives, and the wallet does the peg itself.
 
 This is worth being blunt about: the bridge sees the BTC that goes in and the BTC that comes out. The
 mix breaks the link **on Sequentia**, so the bridge cannot pair a deposit with a withdrawal unless it
-is the only user of the round. It is not a substitute for the bridge being a trusted custodian.
+is the only user of the round. It is not a substitute for the peg being a trusted custodian.
 
 ## The clients
 

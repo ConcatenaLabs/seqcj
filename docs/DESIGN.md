@@ -107,7 +107,7 @@ is tested here rather than twice, because it is the single function whose failur
 ## 5. Bitcoin
 
 Parent-chain BTC cannot be mixed directly — Bitcoin has no confidential transactions, which is the
-whole reason this is worth doing here. So BTC is pegged to **SBTC** through the existing bridge,
+whole reason this is worth doing here. So BTC is pegged to **SBTC** through the SBTC peg (sbtc-bridge),
 mixed, and pegged back out to a fresh Bitcoin address.
 
 The residual risk is real and is stated in both clients: the bridge is a custodian for as long as the

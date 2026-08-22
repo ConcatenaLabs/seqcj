@@ -1,7 +1,7 @@
 {
   "name": "seqcj",
   "version": "0.1.0",
-  "description": "CoinJoin coordinator for Sequentia: Chaumian blind-signature credentials over Confidential Transactions, with a parent-chain BTC path through the SBTC custody bridge.",
+  "description": "CoinJoin coordinator for Sequentia: Chaumian blind-signature credentials over Confidential Transactions, with a parent-chain BTC path through the SBTC peg.",
   "type": "module",
   "private": true,
   "scripts": {

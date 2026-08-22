@@ -54,7 +54,9 @@ output. Someone mixing USDX needs only USDX. That is the open fee market doing t
 | `input` | register UTXOs (transparent, one asset, ownership-proved); receive one blind signature per denomination; register change in the clear | the coordinator sees your coins and your change |
 | `output` | on a fresh connection, present unblinded credentials and name a confidential address each | nothing identifies you |
 | `signing` | the coordinator shuffles, builds, blinds and publishes the transaction; you verify your own outputs and sign your own inputs | — |
-| `done` | the coordinator adds its fee-input signature, combines and broadcasts | — |
+| `broadcasting` | transient: the coordinator adds its fee-input signature, combines and sends | — |
+| `done` | broadcast; `/round/:id` carries the `txid` | — |
+| `failed` | terminal; `/round/:id` carries the `error` | — |
 
 The credential is a Chaumian RSA blind signature (`blindsig.mjs`), one keypair per round and lane —
 so a credential cannot be replayed into another round, or presented against a larger denomination.
@@ -69,7 +71,9 @@ An observer sees a transaction with N inputs and M commitments and one explicit 
 what the blind signatures buy, and it is the only thing they buy.
 
 **Not hidden from the coordinator:** your amounts (it must check the round balances), and the link
-between your inputs and your *change*. This is the standard WabiSabi-style trust boundary.
+between your inputs and your *change*. This is the ZeroLink / Wasabi 1.0 (Chaumian CoinJoin)
+trust boundary. WabiSabi-style amount credentials would hide the change link as well; they are
+not implemented here.
 
 **Not hidden by this software at all:** your network identity. Registering inputs and outputs from
 the same IP address hands the coordinator the link the blind signature just removed. A deployment
@@ -88,19 +92,28 @@ Lanes: USDX 10.00, EURX 10.00, BTC 0.001. The first live round confirmed at heig
 `77f5e1ed48a111baf41ab0d666915cd2b7e8bde168416d9fdd1dd2f1f644197e`, eight outputs of which exactly
 one, the fee, is explicit.
 
-A round needs at least two people, so `tools/live-participant.mjs` joins one from a node wallet:
+A round needs at least two people, so `tools/live-participant.mjs` joins one from a node wallet
+(a legacy, non-descriptor wallet — the tool uses `dumpprivkey`; `createwallet` makes one by default):
 
 ```sh
-node tools/live-participant.mjs --rpc http://user:pass@127.0.0.1:18200 --wallet alice \
+node tools/live-participant.mjs --rpc http://user:pass@127.0.0.1:18776 --wallet alice \
   --coordinator https://sequentiatestnet.com/coinjoin --asset <hex> --denominations 2
 ```
 
 ## Running it
 
+Needs Node 18 or later (the glob form of the test command needs 21+; on older Node list the files).
+
 ```sh
 cp config.example.json config.json     # then fill in the node RPC, the fee asset and the lanes
 node coordinator.mjs
 ```
+
+`SEQCJ_CONFIG` and `SEQCJ_STATE` override where the config and the state file live. Two optional
+keys: `network_fee_atoms` is a floor under the estimated network fee, and `round.stale_ms` is how
+long a lone registration waits for company before the round is released (default 30 minutes). Any
+`round.*` key left out falls back to the defaults in `main()`, which are shorter than the example's
+timers — the example is a choice, not the defaults.
 
 The HTTP API is public by design — anyone should be able to join a round:
 
@@ -108,22 +121,23 @@ The HTTP API is public by design — anyone should be able to join a round:
 |---|---|
 | `GET /status` | service info, the BTC lane, recent rounds |
 | `GET /rounds` | open rounds, their lanes, denominations and blind-signing keys |
-| `GET /round/:id` | phase, deadline, and the transaction once signing starts |
+| `GET /round/:id` | phase, deadline, the transaction once signing starts, and `error` if it failed |
 | `POST /register-input` | outpoints + ownership proofs + blinded credentials → blind signatures |
 | `POST /register-output` | a credential + a confidential address |
 | `POST /sign` | the participant's copy of the round transaction, signed |
 
 ## Bitcoin
 
-Parent-chain BTC joins a round as **SBTC**, through the existing peg
-([sbtc-bridge](https://github.com/GracedEternalKingCabbageMan/sbtc-bridge)): peg in before the round,
-mix, peg out to a fresh Bitcoin address after. The coordinator never touches those funds — it only
-publishes, in `/status`, which lane is the BTC-backed one and where the bridge lives, and the wallet
-does the peg itself.
+Parent-chain BTC joins a round as **SBTC**, through the SBTC bridge
+([sbtc-bridge](https://github.com/GracedEternalKingCabbageMan/sbtc-bridge)) — an operator-run
+custody bridge, not Elements' consensus peg: deposit before the round, mix, withdraw to a fresh
+Bitcoin address after. The coordinator never touches those funds — it only publishes, in `/status`,
+which lane is the BTC-backed one and where the bridge lives, and the wallet talks to the bridge
+itself.
 
 This is worth being blunt about: the bridge sees the BTC that goes in and the BTC that comes out. The
 mix breaks the link **on Sequentia**, so the bridge cannot pair a deposit with a withdrawal unless it
-is the only user of the round. It is not a substitute for the peg being a trusted custodian.
+is the only user of the round. It is not a substitute for the bridge being a trusted custodian.
 
 ## The clients
 
@@ -147,7 +161,10 @@ node --test 'test/**/*.test.mjs'
 `test/e2e-round.test.mjs` starts a real `sequentiad` regtest, funds three participants, and runs a
 complete round through the same client module the browser wallet uses — then checks that each
 participant can unblind exactly its own outputs and that the chain shows nothing but commitments. It
-skips if no daemon binary is present.
+skips if no daemon binary is present: the daemon is `$SEQUENTIAD`, or `~/Sequentia/src/sequentiad`.
+
+`test/e2e-wasm-participant.test.mjs` additionally needs a built `lwk_wasm` package, at
+`$LWK_WASM_PKG` or `~/SWK/lwk_wasm/pkg`, and skips without one.
 
 ## Repository
 

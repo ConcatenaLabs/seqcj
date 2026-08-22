@@ -1,7 +1,7 @@
 {
   "name": "seqcj",
   "version": "0.1.0",
-  "description": "CoinJoin coordinator for Sequentia: Chaumian blind-signature credentials over Confidential Transactions, with a parent-chain BTC path through the SBTC peg.",
+  "description": "CoinJoin coordinator for Sequentia: Chaumian blind-signature credentials over Confidential Transactions, with a parent-chain BTC path through the SBTC custody bridge.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,5 +9,8 @@
     "check": "node --check coordinator.mjs && node --check client.mjs && node --check blindsig.mjs",
     "test": "node --test 'test/**/*.test.mjs'"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
 }

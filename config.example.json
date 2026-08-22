@@ -1,12 +1,13 @@
 {
   "seq": {
-    "rpc": "http://USER:PASS@127.0.0.1:18200",
+    "rpc": "http://USER:PASS@127.0.0.1:18776",
     "wallet": "seqcj"
   },
   "http": { "host": "127.0.0.1", "port": 9971 },
 
   "fee_asset": "FEE_ASSET_ID_HEX",
   "fee_rate_atoms_per_vb": 2,
+  "network_fee_atoms": "0",
 
   "sbtc": { "asset": "SBTC_ASSET_ID_HEX", "bridge_path": "/sbtc" },
 
@@ -16,6 +17,7 @@
   ],
 
   "round": {
+    "stale_ms": 1800000,
     "input_ms": 180000,
     "output_ms": 60000,
     "sign_ms": 180000,

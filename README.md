@@ -129,7 +129,7 @@ The HTTP API is public by design — anyone should be able to join a round:
 ## Bitcoin
 
 Parent-chain BTC joins a round as **SBTC**, through the SBTC peg
-([sbtc-bridge](https://github.com/GracedEternalKingCabbageMan/sbtc-bridge)) — an operator-run
+([sbtc-bridge](https://github.com/ConcatenaLabs/sbtc-bridge)) — an operator-run
 custody peg (the sbtc-bridge multisig reserve), not Elements' federated consensus peg: peg in
 before the round, mix, peg out to a fresh Bitcoin address after. The coordinator never touches
 those funds — it only publishes, in `/status`, which lane is the BTC-backed one and where the
@@ -143,8 +143,8 @@ is the only user of the round. It is not a substitute for the peg being a truste
 
 | | |
 |---|---|
-| [Seqognito](https://github.com/GracedEternalKingCabbageMan/seqognito) | the desktop mixing wallet (Windows, Linux). Sends input registration and output registration over **different Tor circuits**, which is the one thing a browser cannot do and the reason it exists. |
-| [sequentia-web-wallet](https://github.com/GracedEternalKingCabbageMan/sequentia-web-wallet) | the browser wallet's Mix tab. Runs the identical protocol, and says plainly that it cannot separate the two connections. |
+| [Seqognito](https://github.com/ConcatenaLabs/seqognito) | the desktop mixing wallet (Windows, Linux). Sends input registration and output registration over **different Tor circuits**, which is the one thing a browser cannot do and the reason it exists. |
+| [sequentia-web-wallet](https://github.com/ConcatenaLabs/sequentia-web-wallet) | the browser wallet's Mix tab. Runs the identical protocol, and says plainly that it cannot separate the two connections. |
 
 Both vendor `blindsig.mjs` and `client.mjs` from here byte-identically, so the protocol they run is
 the one the end-to-end test proves.

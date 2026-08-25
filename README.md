@@ -88,9 +88,9 @@ https://sequentiatestnet.com/coinjoin/status
 https://sequentiatestnet.com/coinjoin/rounds
 ```
 
-Lanes: USDX 10.00, EURX 10.00, BTC 0.001. The first live round confirmed at height 99691 —
-`77f5e1ed48a111baf41ab0d666915cd2b7e8bde168416d9fdd1dd2f1f644197e`, eight outputs of which exactly
-one, the fee, is explicit.
+`/status` names the lanes the coordinator is currently running, with their assets and
+denominations; that is the authoritative list, because the lanes are configuration and a
+deployment may change them.
 
 A round needs at least two people, so `tools/live-participant.mjs` joins one from a node wallet
 (a legacy, non-descriptor wallet — the tool uses `dumpprivkey`; `createwallet` makes one by default):

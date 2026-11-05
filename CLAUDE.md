@@ -37,7 +37,8 @@ Zero dependencies, plain ES modules, no build step. Four files:
 
 ## Verification bar
 
-`node --test 'test/**/*.test.mjs'`. The end-to-end test starts a real `sequentiad` regtest and runs a
+`npm test` (`node --test test/*.test.mjs`; CI runs it on every pull request and on `master`, the
+end-to-end round included). The end-to-end test starts a real `sequentiad` regtest and runs a
 complete round; if you change assembly, blinding or the fee model, that test is the thing that says
 whether it still works. Do not replace it with a mock.
 

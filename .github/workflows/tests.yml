@@ -1,0 +1,39 @@
+# `npm run check` and `npm test` on every pull request and on master, on Node 18, the Node the
+# testnet server runs the coordinator on. The end-to-end round is the test CLAUDE.md names as the
+# one that says whether a round still works, so it runs here against a real regtest node: the
+# sequentiad of the release the download page serves, checked against its SHA256SUMS.
+#
+# Not run here, by design:
+# - SKIPPED (needs a built lwk_wasm package): test/e2e-wasm-participant.test.mjs.
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  node-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: the released sequentiad
+        run: |
+          set -euo pipefail
+          base=https://sequentiatestnet.com/download
+          page=$(curl -fsSL "$base/core/")
+          tarball=$(grep -oE 'sequentia-core-[0-9.]+-linux-x86_64\.tar\.gz' <<<"$page" | head -1)
+          [ -n "$tarball" ] || { echo "no Linux build named on $base/core/"; exit 1; }
+          curl -fsSLO "$base/$tarball"
+          sums=$(curl -fsSL "$base/SHA256SUMS")
+          grep "  $tarball\$" <<<"$sums" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/node"
+          tar -xzf "$tarball" -C "$RUNNER_TEMP/node" --strip-components=1
+          "$RUNNER_TEMP/node/bin/sequentiad" -version | head -1
+          echo "SEQUENTIAD=$RUNNER_TEMP/node/bin/sequentiad" >> "$GITHUB_ENV"
+      - run: npm run check
+      - run: npm test

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node coordinator.mjs",
     "check": "node --check coordinator.mjs && node --check client.mjs && node --check blindsig.mjs",
-    "test": "node --test 'test/**/*.test.mjs'"
+    "test": "node --test test/*.test.mjs"
   },
   "license": "MIT",
   "engines": {

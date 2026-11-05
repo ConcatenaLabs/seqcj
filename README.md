@@ -155,13 +155,16 @@ is in [`docs/DESIGN.md`](docs/DESIGN.md).
 ## Tests
 
 ```sh
-node --test 'test/**/*.test.mjs'
+npm test    # node --test test/*.test.mjs; SEQUENTIAD names the node the end-to-end round runs
 ```
 
 `test/e2e-round.test.mjs` starts a real `sequentiad` regtest, funds three participants, and runs a
 complete round through the same client module the browser wallet uses — then checks that each
 participant can unblind exactly its own outputs and that the chain shows nothing but commitments. It
 skips if no daemon binary is present: the daemon is `$SEQUENTIAD`, or `~/Sequentia/src/sequentiad`.
+
+CI (`.github/workflows/tests.yml`) runs `npm test` on every pull request and on `master`, with
+the `sequentiad` of the release the download page serves, so the end-to-end round runs there too.
 
 `test/e2e-wasm-participant.test.mjs` additionally needs a built `lwk_wasm` package, at
 `$LWK_WASM_PKG` or `~/SWK/lwk_wasm/pkg`, and skips without one.
